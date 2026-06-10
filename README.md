@@ -1,36 +1,61 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Bolão do Flying 🎠
 
-## Getting Started
+Bolão da Copa do Mundo 2026 para o grupo de amigos. Next.js (App Router) + Drizzle + Postgres (Neon em produção), mobile-first, pt-BR.
 
-First, run the development server:
+## Regras
+
+**Fase de grupos** — ordene as 4 seleções de cada um dos 12 grupos e marque os 8 terceiros que avançam. Trava toda junta no prazo configurado (default: pontapé inicial da Copa).
+
+| Acerto | Pontos |
+|---|---|
+| Posição exata no grupo | 3 |
+| Bônus: previu top-2 e terminou top-2 (acumula) | +1 |
+| Terceiro marcado que avançou | +1 |
+
+**Mata-mata** — palpite de placar exato (após prorrogação); empate exige escolher quem passa nos pênaltis. Cada palpite trava no horário do jogo. Pontos fixos em todas as fases:
+
+| Acerto | Pontos |
+|---|---|
+| Placar exato | 5 |
+| Só o resultado (vencedor ou empate) | 2 |
+| Nº de gols de um dos times (sem placar exato) | +1 |
+| Quem avança de fase | +1 |
+
+Valores em `src/lib/config.ts`.
+
+## Desenvolvimento
 
 ```bash
+cp .env.example .env        # preencha os segredos (AUTH_SECRET: openssl rand -hex 32)
+docker compose up -d        # Postgres local na porta 5434
+npm install
+npm run db:push             # cria as tabelas
+npm run db:seed             # 48 seleções, 104 jogos, prazo default
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+**Auth**: Better Auth com username + senha (cadastro aberto — é só compartilhar o link).
+No cadastro a pessoa escolhe o nome que aparece no ranking. O participante é criado
+automaticamente no primeiro acesso e fica ligado ao user (`participants.userId`).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Testes
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm test          # vitest (engine de pontuação + locks)
+npm run typecheck
+node scripts/smoke-e2e.mjs  # e2e do fluxo de apostas (precisa do dev server na 3456)
+```
 
-## Learn More
+## Deploy (Vercel + Neon)
 
-To learn more about Next.js, take a look at the following resources:
+1. Crie um banco no [Neon](https://neon.tech) e copie a connection string (pooled).
+2. Importe o repo na Vercel e configure as env vars de `.env.example`.
+3. Rode `npm run db:push && npm run db:seed` apontando o `DATABASE_URL` para o Neon.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Arquitetura (resumo)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `src/db/schema.ts` — tabelas; jogos do mata-mata têm slot codes (`1A`, `W74`) até os times serem definidos.
+- `src/lib/session.ts` — `getCurrentParticipant()` via sessão do Better Auth; único ponto de auth que o app usa.
+- `src/lib/auth.ts` / `src/db/auth-schema.ts` — config e tabelas do Better Auth (plugin de username).
+- `src/lib/scoring/` — funções puras de pontuação (sem DB), cobertas por testes.
+- `src/actions/` — server actions com validação zod e enforcement de prazo no servidor.

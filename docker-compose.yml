@@ -1,0 +1,16 @@
+# Postgres local para desenvolvimento (produção usa Neon)
+services:
+  db:
+    image: postgres:17
+    container_name: bolao-flying-db
+    environment:
+      POSTGRES_USER: bolao
+      POSTGRES_PASSWORD: bolao
+      POSTGRES_DB: bolao
+    ports:
+      - '5434:5432'
+    volumes:
+      - bolao_pgdata:/var/lib/postgresql/data
+
+volumes:
+  bolao_pgdata:

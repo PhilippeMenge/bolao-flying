@@ -1,26 +1,122 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  /* Brasil na Copa: verde, amarelo e azul da amarelinha */
+  --verde: #009739;
+  --verde-escuro: #006428;
+  --amarelo: #ffd83b;
+  --amarelo-vivo: #ffc400;
+  --azul: #04257c;
+  --azul-escuro: #021a56;
+  --branco: #fffdf4;
+  --tinta: #0a2364;
+  --danger: #d7263d;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-verde: var(--verde);
+  --color-verde-escuro: var(--verde-escuro);
+  --color-amarelo: var(--amarelo);
+  --color-amarelo-vivo: var(--amarelo-vivo);
+  --color-azul: var(--azul);
+  --color-azul-escuro: var(--azul-escuro);
+  --color-branco: var(--branco);
+  --color-tinta: var(--tinta);
+  --color-danger: var(--danger);
+  --font-display: var(--font-passion);
+  --font-sans: var(--font-archivo);
+  --font-mono: var(--font-plex-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/* App shell iOS: html E body travados (Safari ignora overflow:hidden só no body)
+   e o scroll acontece exclusivamente no .app-scroll (<main>) */
+html {
+  height: 100%;
+  overflow: hidden;
+  /* Pinta o "canvas" além do body (área sob o menu/home indicator no mobile)
+     de azul, casando com o menu — sem isso o amarelo do body vaza pra lá */
+  background-color: var(--azul);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  height: 100dvh;
+  overflow: hidden;
+}
+
+.app-scroll {
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
+  touch-action: pan-y;
+}
+
+body {
+  color: var(--tinta);
+  font-family: var(--font-archivo), sans-serif;
+  background-color: var(--amarelo);
+  background-image:
+    radial-gradient(820px 420px at 50% -8%, rgba(255, 255, 255, 0.4), transparent 62%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(0, 151, 57, 0.05) 0,
+      rgba(0, 151, 57, 0.05) 22px,
+      transparent 22px,
+      transparent 44px
+    );
+}
+
+/* Card branco: borda verde + sombra dura azul (as 3 cores em camadas) */
+.sticker {
+  background: var(--branco);
+  color: var(--tinta);
+  border: 2px solid var(--verde);
+  border-radius: 12px;
+  box-shadow: 4px 4px 0 var(--azul);
+}
+
+/* Card azul: letreiro/placar */
+.card-azul {
+  background: var(--azul);
+  color: var(--branco);
+  border: 2px solid var(--azul-escuro);
+  border-radius: 12px;
+  box-shadow: 4px 4px 0 rgba(2, 26, 86, 0.35);
+}
+
+/* Bandeirinhas de festa (faixa sob o header) */
+.bandeirinhas {
+  height: 12px;
+  background-image: conic-gradient(
+    from -45deg at 50% 100%,
+    transparent 0deg 90deg,
+    var(--cor-bandeirinha, var(--verde)) 90deg 270deg,
+    transparent 270deg 360deg
+  );
+  background-size: 18px 12px;
+  background-repeat: repeat-x;
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.rise {
+  animation: rise 0.4s ease-out both;
+}
+
+/* Resposta imediata ao toque no mobile: sem espera de duplo-toque/zoom */
+button,
+a,
+input,
+label,
+[role='button'] {
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
 }

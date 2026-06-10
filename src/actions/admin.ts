@@ -1,0 +1,171 @@
+'use server';
+
+import { revalidatePath } from 'next/cache';
+import { redirect } from 'next/navigation';
+import { eq, or } from 'drizzle-orm';
+import { z } from 'zod';
+import { db } from '@/db';
+import { matches, participants, teams } from '@/db/schema';
+import { CONFIG_KEYS } from '@/lib/config';
+import { setConfigValue } from '@/lib/app-config';
+import {
+  checkAdminPassword,
+  clearAdminCookie,
+  requireAdmin,
+  setAdminCookie,
+} from '@/lib/admin-auth';
+
+export type AdminResult = { ok: true } | { ok: false; error: string };
+
+export async function loginAdmin(formData: FormData): Promise<AdminResult> {
+  const password = String(formData.get('password') ?? '');
+  if (!checkAdminPassword(password)) {
+    return { ok: false, error: 'Senha incorreta.' };
+  }
+  await setAdminCookie();
+  redirect('/admin');
+}
+
+export async function logoutAdmin(): Promise<void> {
+  await clearAdminCookie();
+  redirect('/admin/login');
+}
+
+const resultadoSchema = z.object({
+  matchId: z.number().int().min(1).max(104),
+  homeScore: z.number().int().min(0).max(99),
+  awayScore: z.number().int().min(0).max(99),
+  penaltyWinnerTeamId: z.number().int().positive().nullable(),
+  resultLockedByAdmin: z.boolean(),
+});
+
+export async function salvarResultado(
+  payload: z.infer<typeof resultadoSchema>,
+): Promise<AdminResult> {
+  await requireAdmin();
+  const parsed = resultadoSchema.safeParse(payload);
+  if (!parsed.success) return { ok: false, error: 'Dados inválidos.' };
+  const { matchId, homeScore, awayScore, penaltyWinnerTeamId, resultLockedByAdmin } = parsed.data;
+
+  const [match] = await db.select().from(matches).where(eq(matches.id, matchId));
+  if (!match) return { ok: false, error: 'Jogo não encontrado.' };
+  if (!match.homeTeamId || !match.awayTeamId) {
+    return { ok: false, error: 'Defina os times do confronto antes do resultado.' };
+  }
+
+  const isKnockout = match.stage !== 'GROUP';
+  const isDraw = homeScore === awayScore;
+  if (isKnockout && isDraw) {
+    if (!penaltyWinnerTeamId) {
+      return { ok: false, error: 'Empate no mata-mata: informe quem venceu nos pênaltis.' };
+    }
+    if (penaltyWinnerTeamId !== match.homeTeamId && penaltyWinnerTeamId !== match.awayTeamId) {
+      return { ok: false, error: 'O vencedor dos pênaltis precisa ser um dos dois times.' };
+    }
+  }
+  const effectivePenaltyWinner = isKnockout && isDraw ? penaltyWinnerTeamId : null;
+
+  await db
+    .update(matches)
+    .set({
+      homeScore,
+      awayScore,
+      penaltyWinnerTeamId: effectivePenaltyWinner,
+      status: 'FINISHED',
+      resultLockedByAdmin,
+    })
+    .where(eq(matches.id, matchId));
+
+  // Propaga vencedor/perdedor para os slots do mata-mata (ex: 'W89', 'L101')
+  if (isKnockout) {
+    const winnerId = isDraw
+      ? effectivePenaltyWinner!
+      : homeScore > awayScore
+        ? match.homeTeamId
+        : match.awayTeamId;
+    const loserId = winnerId === match.homeTeamId ? match.awayTeamId : match.homeTeamId;
+    for (const [slot, teamId] of [
+      [`W${matchId}`, winnerId],
+      [`L${matchId}`, loserId],
+    ] as const) {
+      const dependents = await db
+        .select()
+        .from(matches)
+        .where(or(eq(matches.homeSlot, slot), eq(matches.awaySlot, slot)));
+      for (const dep of dependents) {
+        await db
+          .update(matches)
+          .set(dep.homeSlot === slot ? { homeTeamId: teamId } : { awayTeamId: teamId })
+          .where(eq(matches.id, dep.id));
+      }
+    }
+  }
+
+  revalidatePath('/jogos');
+  revalidatePath('/');
+  revalidatePath('/admin/resultados');
+  return { ok: true };
+}
+
+export async function limparResultado(matchId: number): Promise<AdminResult> {
+  await requireAdmin();
+  await db
+    .update(matches)
+    .set({
+      homeScore: null,
+      awayScore: null,
+      penaltyWinnerTeamId: null,
+      status: 'SCHEDULED',
+      resultLockedByAdmin: false,
+    })
+    .where(eq(matches.id, matchId));
+  revalidatePath('/jogos');
+  revalidatePath('/admin/resultados');
+  return { ok: true };
+}
+
+const renomearSchema = z.object({
+  participantId: z.uuid(),
+  name: z.string().trim().min(2).max(40),
+});
+
+export async function renomearParticipante(
+  payload: z.infer<typeof renomearSchema>,
+): Promise<AdminResult> {
+  await requireAdmin();
+  const parsed = renomearSchema.safeParse(payload);
+  if (!parsed.success) return { ok: false, error: 'Nome inválido (2 a 40 caracteres).' };
+  try {
+    await db
+      .update(participants)
+      .set({ name: parsed.data.name })
+      .where(eq(participants.id, parsed.data.participantId));
+  } catch {
+    return { ok: false, error: 'Já existe um participante com esse nome.' };
+  }
+  revalidatePath('/admin/participantes');
+  revalidatePath('/classificacao');
+  return { ok: true };
+}
+
+export async function excluirParticipante(participantId: string): Promise<AdminResult> {
+  await requireAdmin();
+  const parsed = z.uuid().safeParse(participantId);
+  if (!parsed.success) return { ok: false, error: 'Id inválido.' };
+  // Cascata remove os palpites; a conta (user) continua existindo e, se a pessoa
+  // logar de novo, um novo participante é criado automaticamente.
+  await db.delete(participants).where(eq(participants.id, parsed.data));
+  revalidatePath('/admin/participantes');
+  return { ok: true };
+}
+
+export async function salvarPrazoGrupos(deadlineIso: string): Promise<AdminResult> {
+  await requireAdmin();
+  const date = new Date(deadlineIso);
+  if (Number.isNaN(date.getTime())) return { ok: false, error: 'Data inválida.' };
+  await setConfigValue(CONFIG_KEYS.groupStageDeadline, date.toISOString());
+  revalidatePath('/');
+  revalidatePath('/palpites/grupos');
+  revalidatePath('/admin/config');
+  return { ok: true };
+}
