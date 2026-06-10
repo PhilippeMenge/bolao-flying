@@ -1,6 +1,8 @@
 # Bolão do Flying 🎠
 
-Bolão da Copa do Mundo 2026 para o grupo de amigos. Next.js (App Router) + Drizzle + Postgres (Neon em produção), mobile-first, pt-BR.
+Bolão da Copa do Mundo 2026 para o grupo de amigos. Next.js (App Router) + Drizzle + Postgres (Supabase via Vercel Marketplace em produção), mobile-first, pt-BR.
+
+**Produção**: https://bolao-flying.vercel.app (deploy automático a cada push na `main`).
 
 ## Regras
 
@@ -43,14 +45,36 @@ automaticamente no primeiro acesso e fica ligado ao user (`participants.userId`)
 ```bash
 npm test          # vitest (engine de pontuação + locks)
 npm run typecheck
-node scripts/smoke-e2e.mjs  # e2e do fluxo de apostas (precisa do dev server na 3456)
+node scripts/smoke-e2e.mjs        # e2e do fluxo de apostas (precisa do dev server na 3456)
+node scripts/smoke-admin.mjs      # e2e do painel admin
+node scripts/smoke-mata-mata.mjs  # e2e dos palpites de mata-mata
 ```
 
-## Deploy (Vercel + Neon)
+## Deploy (Vercel + Supabase)
 
-1. Crie um banco no [Neon](https://neon.tech) e copie a connection string (pooled).
-2. Importe o repo na Vercel e configure as env vars de `.env.example`.
-3. Rode `npm run db:push && npm run db:seed` apontando o `DATABASE_URL` para o Neon.
+O projeto já está deployado: push na `main` dispara o build (os commits precisam ser de um
+autor com email vinculado a uma conta GitHub do time, senão a Vercel bloqueia o deploy).
+
+Setup feito uma única vez, registrado aqui para referência:
+
+1. `vercel link` + `vercel git connect` (repo GitHub → deploy automático).
+2. Postgres provisionado pelo **Vercel Marketplace** (`vercel integration add supabase`) —
+   sem conta externa; a integração cria as env vars `POSTGRES_URL*` no projeto.
+3. Demais env vars (`ADMIN_PASSWORD`, `AUTH_SECRET`, `CRON_SECRET`, `BETTER_AUTH_URL`)
+   via `vercel env add`.
+4. Schema e seed no banco de produção:
+   ```bash
+   vercel env pull /tmp/prod.env --environment=production --yes
+   source /tmp/prod.env
+   # drizzle-kit precisa confiar na CA da Supabase para a verificação TLS:
+   NODE_EXTRA_CA_CERTS=<ca-da-supabase>.pem DATABASE_URL="$POSTGRES_URL_NON_POOLING" npx drizzle-kit push
+   DATABASE_URL="$POSTGRES_URL_NON_POOLING" npx tsx src/db/seed/seed.ts
+   ```
+
+**TLS**: o app verifica o certificado do Postgres contra a CA raiz da Supabase, que fica
+"pinada" em `src/db/supabase-ca.ts` (verificação completa, sem `rejectUnauthorized: false`).
+O client (`src/db/index.ts`) escolhe o driver pelo host da URL: Neon → HTTP serverless;
+Supabase → node-postgres com a CA pinada; outros (ex: Docker local) → node-postgres puro.
 
 ## Arquitetura (resumo)
 
