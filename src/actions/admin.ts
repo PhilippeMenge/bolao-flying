@@ -159,6 +159,37 @@ export async function excluirParticipante(participantId: string): Promise<AdminR
   return { ok: true };
 }
 
+const confrontoSchema = z.object({
+  matchId: z.number().int().min(73).max(104),
+  homeTeamId: z.number().int().positive().nullable(),
+  awayTeamId: z.number().int().positive().nullable(),
+});
+
+export async function definirConfronto(
+  payload: z.infer<typeof confrontoSchema>,
+): Promise<AdminResult> {
+  await requireAdmin();
+  const parsed = confrontoSchema.safeParse(payload);
+  if (!parsed.success) return { ok: false, error: 'Dados inválidos.' };
+  const { matchId, homeTeamId, awayTeamId } = parsed.data;
+
+  const [match] = await db.select().from(matches).where(eq(matches.id, matchId));
+  if (!match || match.stage === 'GROUP') return { ok: false, error: 'Jogo não encontrado.' };
+  if (match.status === 'FINISHED') {
+    return { ok: false, error: 'Jogo já tem resultado — limpe o resultado antes de mudar o confronto.' };
+  }
+  if (homeTeamId && awayTeamId && homeTeamId === awayTeamId) {
+    return { ok: false, error: 'Os dois lados não podem ser o mesmo time.' };
+  }
+
+  await db.update(matches).set({ homeTeamId, awayTeamId }).where(eq(matches.id, matchId));
+
+  revalidatePath('/palpites/mata-mata');
+  revalidatePath('/jogos');
+  revalidatePath('/admin/confrontos');
+  return { ok: true };
+}
+
 export async function salvarPrazoGrupos(deadlineIso: string): Promise<AdminResult> {
   await requireAdmin();
   const date = new Date(deadlineIso);

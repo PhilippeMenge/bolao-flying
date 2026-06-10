@@ -7,6 +7,7 @@ import { getGroupStageDeadline } from '@/lib/app-config';
 import { isLocked } from '@/lib/locks';
 import { getCurrentParticipant } from '@/lib/session';
 import { GroupBettingEditor } from '@/components/GroupBettingEditor';
+import { PalpitesTabs } from '@/components/PalpitesTabs';
 
 export const dynamic = 'force-dynamic';
 
@@ -46,12 +47,15 @@ export default async function PalpitesGruposPage() {
     .filter((l): l is string => l != null);
 
   return (
-    <GroupBettingEditor
-      groups={groups}
-      initialThirds={initialThirds}
-      hasSaved={saved.length > 0}
-      locked={isLocked(deadline, new Date())}
-      deadlineIso={deadline.toISOString()}
-    />
+    <div>
+      <PalpitesTabs />
+      <GroupBettingEditor
+        groups={groups}
+        initialThirds={initialThirds}
+        hasSaved={saved.length > 0}
+        locked={isLocked(deadline, new Date())}
+        deadlineIso={deadline.toISOString()}
+      />
+    </div>
   );
 }

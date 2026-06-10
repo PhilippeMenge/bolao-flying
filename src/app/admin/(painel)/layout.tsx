@@ -6,6 +6,7 @@ import { logoutAdmin } from '@/actions/admin';
 const TABS = [
   { href: '/admin', label: 'Visão geral' },
   { href: '/admin/resultados', label: 'Resultados' },
+  { href: '/admin/confrontos', label: 'Confrontos' },
   { href: '/admin/participantes', label: 'Participantes' },
   { href: '/admin/config', label: 'Config' },
 ] as const;
