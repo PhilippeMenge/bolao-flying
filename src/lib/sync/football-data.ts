@@ -56,7 +56,8 @@ export function mapRawMatch(m: RawMatch): ExternalMatch | null {
   return {
     externalId: String(m.id),
     stage,
-    groupLetter: m.group ? m.group.replace('Group ', '').trim() || null : null,
+    // A API usa 'GROUP_A' (e versões antigas, 'Group A')
+    groupLetter: m.group ? m.group.replace(/^GROUP[_ ]/i, '').trim() || null : null,
     utcDate: m.utcDate,
     finished,
     homeTla: m.homeTeam?.tla ?? null,
