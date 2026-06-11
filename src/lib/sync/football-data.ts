@@ -14,6 +14,16 @@ const STAGE_MAP: Record<string, ExternalStage> = {
   FINAL: 'FINAL',
 };
 
+// A football-data usa algumas siglas fora do padrão FIFA
+const TLA_ALIASES: Record<string, string> = {
+  URY: 'URU', // Uruguai
+};
+
+function normalizeTla(tla: string | null | undefined): string | null {
+  if (!tla) return null;
+  return TLA_ALIASES[tla] ?? tla;
+}
+
 type RawMatch = {
   id: number;
   utcDate: string;
@@ -60,8 +70,8 @@ export function mapRawMatch(m: RawMatch): ExternalMatch | null {
     groupLetter: m.group ? m.group.replace(/^GROUP[_ ]/i, '').trim() || null : null,
     utcDate: m.utcDate,
     finished,
-    homeTla: m.homeTeam?.tla ?? null,
-    awayTla: m.awayTeam?.tla ?? null,
+    homeTla: normalizeTla(m.homeTeam?.tla),
+    awayTla: normalizeTla(m.awayTeam?.tla),
     fullTime: finished && hasScore ? { home: m.score.fullTime.home!, away: m.score.fullTime.away! } : null,
     penaltyWinnerSide:
       finished && m.score.duration === 'PENALTY_SHOOTOUT'

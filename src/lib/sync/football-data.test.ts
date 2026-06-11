@@ -49,4 +49,10 @@ describe('mapRawMatch', () => {
   it('fase desconhecida é descartada', () => {
     expect(mapRawMatch({ ...RAW, stage: 'PLAYOFFS' } as never)).toBeNull();
   });
+
+  it('TLA fora do padrão FIFA é normalizada (URY -> URU)', () => {
+    const m = mapRawMatch({ ...RAW, homeTeam: { tla: 'URY' }, awayTeam: { tla: 'ESP' } } as never)!;
+    expect(m.homeTla).toBe('URU');
+    expect(m.awayTla).toBe('ESP');
+  });
 });
