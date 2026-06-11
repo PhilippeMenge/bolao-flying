@@ -2,12 +2,15 @@
 
 import { revalidatePath } from 'next/cache';
 import { redirect } from 'next/navigation';
+import { headers } from 'next/headers';
 import { eq, or } from 'drizzle-orm';
 import { z } from 'zod';
 import { db } from '@/db';
 import { matches, participants, teams } from '@/db/schema';
+import { user } from '@/db/auth-schema';
 import { CONFIG_KEYS } from '@/lib/config';
 import { setConfigValue } from '@/lib/app-config';
+import { createResetToken } from '@/lib/reset-token';
 import {
   checkAdminPassword,
   clearAdminCookie,
@@ -148,15 +151,45 @@ export async function renomearParticipante(
   return { ok: true };
 }
 
-export async function excluirParticipante(participantId: string): Promise<AdminResult> {
+export async function excluirConta(participantId: string): Promise<AdminResult> {
   await requireAdmin();
   const parsed = z.uuid().safeParse(participantId);
   if (!parsed.success) return { ok: false, error: 'Id inválido.' };
-  // Cascata remove os palpites; a conta (user) continua existindo e, se a pessoa
-  // logar de novo, um novo participante é criado automaticamente.
-  await db.delete(participants).where(eq(participants.id, parsed.data));
+
+  const [participant] = await db.select().from(participants).where(eq(participants.id, parsed.data));
+  if (!participant) return { ok: false, error: 'Participante não encontrado.' };
+
+  // Cascata remove os palpites; depois a conta de login (cascata remove sessões/credenciais).
+  await db.delete(participants).where(eq(participants.id, participant.id));
+  if (participant.userId) {
+    await db.delete(user).where(eq(user.id, participant.userId));
+  }
+
   revalidatePath('/admin/participantes');
+  revalidatePath('/classificacao');
   return { ok: true };
+}
+
+export type LinkResetResult = { ok: true; url: string } | { ok: false; error: string };
+
+export async function gerarLinkResetSenha(participantId: string): Promise<LinkResetResult> {
+  await requireAdmin();
+  const parsed = z.uuid().safeParse(participantId);
+  if (!parsed.success) return { ok: false, error: 'Id inválido.' };
+
+  const [participant] = await db.select().from(participants).where(eq(participants.id, parsed.data));
+  if (!participant) return { ok: false, error: 'Participante não encontrado.' };
+  if (!participant.userId) {
+    return { ok: false, error: 'Esse participante não tem conta de login (registro antigo).' };
+  }
+
+  const secret = process.env.AUTH_SECRET;
+  if (!secret) return { ok: false, error: 'Configuração de auth ausente.' };
+
+  const token = createResetToken(participant.userId, secret, Date.now());
+  const origin =
+    (await headers()).get('origin') ?? process.env.BETTER_AUTH_URL ?? 'http://localhost:3000';
+  return { ok: true, url: `${origin}/resetar-senha?token=${encodeURIComponent(token)}` };
 }
 
 const confrontoSchema = z.object({
