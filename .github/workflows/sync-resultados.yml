@@ -1,0 +1,18 @@
+# Gatilho frequente do sync de resultados (o cron da Vercel no plano free é só
+# 1x/dia; o Actions chama o endpoint a cada 20 min durante a Copa).
+name: sync-resultados
+
+on:
+  schedule:
+    - cron: '*/20 * * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Chama o endpoint de sync
+        run: |
+          curl -fsS -X POST "https://bolao-flying.vercel.app/api/cron/sync-results" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}" \
+            -w "\nhttp %{http_code}\n"

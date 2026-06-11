@@ -31,6 +31,8 @@ export const CONFIG_KEYS = {
   groupPositionOverrides: 'groupPositionOverrides',
   // boolean — liga/desliga o sync automático de resultados
   syncEnabled: 'syncEnabled',
+  // SyncSummary — resultado da última execução do sync
+  lastSync: 'lastSync',
 } as const;
 
 export const GROUP_LETTERS = ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'] as const;

@@ -11,6 +11,8 @@ import { user } from '@/db/auth-schema';
 import { CONFIG_KEYS } from '@/lib/config';
 import { setConfigValue } from '@/lib/app-config';
 import { createResetToken } from '@/lib/reset-token';
+import { propagateKnockoutSlots } from '@/lib/sync/propagate';
+import { runSync, type SyncSummary } from '@/lib/sync/run-sync';
 import {
   checkAdminPassword,
   clearAdminCookie,
@@ -87,21 +89,7 @@ export async function salvarResultado(
         ? match.homeTeamId
         : match.awayTeamId;
     const loserId = winnerId === match.homeTeamId ? match.awayTeamId : match.homeTeamId;
-    for (const [slot, teamId] of [
-      [`W${matchId}`, winnerId],
-      [`L${matchId}`, loserId],
-    ] as const) {
-      const dependents = await db
-        .select()
-        .from(matches)
-        .where(or(eq(matches.homeSlot, slot), eq(matches.awaySlot, slot)));
-      for (const dep of dependents) {
-        await db
-          .update(matches)
-          .set(dep.homeSlot === slot ? { homeTeamId: teamId } : { awayTeamId: teamId })
-          .where(eq(matches.id, dep.id));
-      }
-    }
+    await propagateKnockoutSlots(matchId, winnerId, loserId);
   }
 
   revalidatePath('/jogos');
@@ -232,4 +220,18 @@ export async function salvarPrazoGrupos(deadlineIso: string): Promise<AdminResul
   revalidatePath('/palpites/grupos');
   revalidatePath('/admin/config');
   return { ok: true };
+}
+
+export async function alternarSync(enabled: boolean): Promise<AdminResult> {
+  await requireAdmin();
+  await setConfigValue(CONFIG_KEYS.syncEnabled, enabled === true);
+  revalidatePath('/admin/config');
+  return { ok: true };
+}
+
+export async function sincronizarAgora(): Promise<SyncSummary> {
+  await requireAdmin();
+  const summary = await runSync();
+  revalidatePath('/admin/config');
+  return summary;
 }
