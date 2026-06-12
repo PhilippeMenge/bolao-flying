@@ -188,7 +188,7 @@ export function GroupBettingEditor({
         </div>
       )}
 
-      <div className="mt-5 space-y-4">
+      <div className="mt-5 space-y-4 lg:grid lg:grid-cols-2 lg:items-start lg:gap-4 lg:space-y-0">
         {groups.map((g, gi) => (
           <GroupSection
             key={g.letter}
@@ -211,7 +211,7 @@ export function GroupBettingEditor({
         <p className="mt-1.5 text-xs text-branco/70">
           Destes 12 terceiros colocados (segundo o seu palpite), marque os 8 que avançam.
         </p>
-        <div className="mt-3 grid grid-cols-2 gap-2">
+        <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-4">
           {thirdTeams.map(({ letter, team }) => {
             const selected = thirds.has(letter);
             return (
@@ -241,7 +241,7 @@ export function GroupBettingEditor({
           e assenta no lugar natural quando chega ao fim da página */}
       {!locked && (
         <div className="sticky bottom-0 z-10 -mx-4 mt-4">
-          <div className="mx-auto max-w-lg px-4 pb-2">
+          <div className="mx-auto max-w-lg px-4 pb-2 lg:max-w-5xl">
             {message && (
               <div
                 className={`mb-2 rounded-lg border-2 px-4 py-2.5 text-sm font-bold ${

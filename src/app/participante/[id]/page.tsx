@@ -93,7 +93,7 @@ export default async function ParticipantePage({
       ) : (
         <section>
           <h2 className="font-display text-xl uppercase text-tinta">Fase de grupos</h2>
-          <div className="mt-2 grid grid-cols-2 gap-2.5">
+          <div className="mt-2 grid grid-cols-2 gap-2.5 lg:grid-cols-4">
             {GROUP_LETTERS.map((letter) => {
               const groupTeams = allTeams
                 .filter((t) => t.groupLetter === letter && positionByTeam.has(t.id))
@@ -131,7 +131,7 @@ export default async function ParticipantePage({
             Nenhum palpite de mata-mata visível ainda (aparecem quando cada jogo trava).
           </p>
         ) : (
-          <ul className="mt-2 space-y-2">
+          <ul className="mt-2 space-y-2 lg:grid lg:grid-cols-2 lg:items-start lg:gap-2 lg:space-y-0">
             {visibleKoPreds.map((p) => {
               const match = matchById.get(p.matchId)!;
               const home = match.homeTeamId ? teamById.get(match.homeTeamId) : null;

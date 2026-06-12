@@ -4,11 +4,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 
 const ITEMS = [
-  { href: '/', label: 'Início', icon: '🏟️' },
-  { href: '/palpites/grupos', label: 'Palpites', icon: '🎯' },
-  { href: '/jogos', label: 'Jogos', icon: '📅' },
-  { href: '/classificacao', label: 'Ranking', icon: '🏆' },
-  { href: '/regras', label: 'Regras', icon: '📜' },
+  { href: '/', label: 'Início', icon: '🏟️', match: [] },
+  { href: '/palpites/grupos', label: 'Palpites', icon: '🎯', match: ['/palpites'] },
+  { href: '/grupos', label: 'Grupos', icon: '⚽', match: ['/grupos', '/jogos'] },
+  { href: '/classificacao', label: 'Ranking', icon: '🏆', match: ['/classificacao'] },
+  { href: '/regras', label: 'Regras', icon: '📜', match: ['/regras'] },
 ] as const;
 
 // Rodapé do app shell (sem position:fixed): a coluna de 100dvh garante que ele
@@ -21,7 +21,9 @@ export function BottomNav() {
       <div className="mx-auto grid max-w-lg grid-cols-5">
         {ITEMS.map((item) => {
           const active =
-            item.href === '/' ? pathname === '/' : pathname.startsWith(item.href.split('/').slice(0, 2).join('/'));
+            item.href === '/'
+              ? pathname === '/'
+              : item.match.some((prefix) => pathname.startsWith(prefix));
           return (
             <Link
               key={item.href}

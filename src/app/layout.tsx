@@ -40,7 +40,7 @@ export default function RootLayout({
       <body className="flex h-dvh flex-col overflow-hidden">
         <header className="z-20 shrink-0">
           <div className="bg-verde">
-            <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-2.5">
+            <div className="mx-auto flex max-w-lg items-center justify-between px-4 py-2.5 lg:max-w-5xl">
               <a href="/" className="font-display text-2xl uppercase leading-none text-branco">
                 Bolão do <span className="text-amarelo">Flying</span>
                 <span className="ml-1.5 align-middle text-lg">🎠</span>
@@ -53,7 +53,7 @@ export default function RootLayout({
           <Bandeirinhas />
         </header>
         <main className="app-scroll min-h-0 flex-1">
-          <div className="mx-auto w-full max-w-lg px-4 pb-8 pt-5">{children}</div>
+          <div className="mx-auto w-full max-w-lg px-4 pb-8 pt-5 lg:max-w-5xl">{children}</div>
         </main>
         <BottomNav />
       </body>

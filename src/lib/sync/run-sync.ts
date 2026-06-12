@@ -98,6 +98,7 @@ export async function runSync(provider?: ResultProvider | null): Promise<SyncSum
 
     if (plan.results.length > 0 || plan.fillTeams.length > 0) {
       revalidatePath('/jogos');
+      revalidatePath('/grupos');
       revalidatePath('/classificacao');
       revalidatePath('/palpites/mata-mata');
       revalidatePath('/');

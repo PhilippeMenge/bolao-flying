@@ -14,7 +14,7 @@ export default async function ClassificacaoPage() {
   const isLive = liveGroupCount > 0;
 
   return (
-    <div className="rise">
+    <div className="rise lg:mx-auto lg:max-w-2xl">
       <div className="flex items-center justify-between gap-2">
         <h1 className="font-display text-4xl uppercase leading-none text-tinta">Ranking</h1>
         {isLive && (

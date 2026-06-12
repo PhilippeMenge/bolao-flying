@@ -18,7 +18,7 @@ function PointsRow({ label, points, example }: { label: string; points: string; 
 
 export default function RegrasPage() {
   return (
-    <div className="rise space-y-5">
+    <div className="rise space-y-5 lg:mx-auto lg:max-w-2xl">
       <div>
         <h1 className="font-display text-4xl uppercase leading-none text-tinta">
           Regras do bolão

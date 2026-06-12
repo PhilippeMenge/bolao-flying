@@ -1,4 +1,5 @@
 import { asc } from 'drizzle-orm';
+import { GruposTabs } from '@/components/GruposTabs';
 import { db } from '@/db';
 import { matches, teams, type Match, type Team } from '@/db/schema';
 import { TIMEZONE } from '@/lib/config';
@@ -74,7 +75,11 @@ export default async function JogosPage() {
       <h1 className="font-display text-4xl uppercase leading-none text-tinta">Jogos</h1>
       <p className="mt-2 text-sm text-tinta/70">Horários de Brasília.</p>
 
-      <div className="mt-5 space-y-5">
+      <div className="mt-4">
+        <GruposTabs />
+      </div>
+
+      <div className="space-y-5">
         {days.map((day) => (
           <section key={day.key} id={day.key === todayKey ? 'hoje' : undefined}>
             <h2
@@ -87,7 +92,7 @@ export default async function JogosPage() {
               {day.label}
               {day.key === todayKey && <span className="text-amarelo"> — hoje</span>}
             </h2>
-            <ul className="mt-2 space-y-2">
+            <ul className="mt-2 space-y-2 lg:grid lg:grid-cols-2 lg:gap-2 lg:space-y-0">
               {day.matches.map((m) => {
                 const home = m.homeTeamId ? teamById.get(m.homeTeamId) ?? null : null;
                 const away = m.awayTeamId ? teamById.get(m.awayTeamId) ?? null : null;

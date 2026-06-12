@@ -11,7 +11,7 @@ export default async function EntrarPage() {
   if (session) redirect('/');
 
   return (
-    <div className="rise">
+    <div className="rise lg:mx-auto lg:max-w-md">
       {/* Foto do grupo: estilo foto colada no álbum */}
       <div className="mx-auto mb-5 max-w-sm -rotate-1 rounded-md border-2 border-verde bg-branco p-2 pb-3 shadow-[5px_5px_0_var(--azul)]">
         <Image

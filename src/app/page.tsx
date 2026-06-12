@@ -59,7 +59,7 @@ export default async function HomePage() {
   }
 
   return (
-    <div className="rise space-y-4">
+    <div className="rise space-y-4 lg:mx-auto lg:max-w-2xl">
       <div>
         <p className="font-mono text-[11px] uppercase tracking-widest text-tinta/60">
           Fala, craque

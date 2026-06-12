@@ -203,7 +203,7 @@ export function KnockoutBetting({ matches }: { matches: KnockoutMatchView[] }) {
             <h2 className="font-display text-xl uppercase leading-none text-tinta">
               {STAGE_LABELS[stage]}
             </h2>
-            <div className="mt-2 space-y-2.5">
+            <div className="mt-2 space-y-2.5 lg:grid lg:grid-cols-2 lg:items-start lg:gap-2.5 lg:space-y-0">
               {stageMatches.map((m) => (
                 <MatchCard key={m.id} match={m} />
               ))}

@@ -60,8 +60,8 @@ try {
   await row.getByText('14 confirmados').waitFor();
   console.log('✓ ranking: 15 pts ao vivo (14 confirmados + 1 de 3º ao vivo), breakdown correto');
 
-  // 4. aba Grupos: tabela do A fechada, demais aguardando, melhores 3ºs com 1 time
-  await page.goto(`${BASE}/classificacao/grupos`);
+  // 4. aba Grupos (agora em /grupos, junto de Jogos): tabela do A fechada + melhores 3ºs
+  await page.goto(`${BASE}/grupos`);
   await page.getByText('fechado', { exact: true }).waitFor();
   await page.getByRole('heading', { name: 'Melhores 3ºs' }).waitFor();
   console.log('✓ aba Grupos renderiza tabela fechada + melhores 3ºs');

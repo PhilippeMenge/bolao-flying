@@ -93,6 +93,7 @@ export async function salvarResultado(
   }
 
   revalidatePath('/jogos');
+  revalidatePath('/grupos');
   revalidatePath('/');
   revalidatePath('/admin/resultados');
   return { ok: true };
@@ -111,6 +112,7 @@ export async function limparResultado(matchId: number): Promise<AdminResult> {
     })
     .where(eq(matches.id, matchId));
   revalidatePath('/jogos');
+  revalidatePath('/grupos');
   revalidatePath('/admin/resultados');
   return { ok: true };
 }

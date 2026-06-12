@@ -61,7 +61,7 @@ export default async function EstatisticasPage() {
       </div>
 
       {/* Destaques */}
-      <div className="mt-4 grid grid-cols-2 gap-2">
+      <div className="mt-4 grid grid-cols-2 gap-2 lg:grid-cols-4">
         {maisOusado && (
           <div className="sticker px-3 py-2.5">
             <p className="font-mono text-[10px] uppercase tracking-wider text-tinta/55">
@@ -179,7 +179,7 @@ export default async function EstatisticasPage() {
         <p className="mt-1 text-xs text-tinta/60">
           % de apostas em cada posição. Times na ordem do consenso.
         </p>
-        <div className="mt-3 space-y-3">
+        <div className="mt-3 space-y-3 lg:grid lg:grid-cols-3 lg:items-start lg:gap-3 lg:space-y-0">
           {GROUP_LETTERS.map((letter) => {
             const matrix = stats.matrices.get(letter);
             if (!matrix) return null;
@@ -238,6 +238,8 @@ export default async function EstatisticasPage() {
         </div>
       </section>
 
+      {/* No desktop, as três listas finais ficam lado a lado */}
+      <div className="lg:grid lg:grid-cols-2 lg:items-start lg:gap-x-3">
       {/* Termômetro da ousadia */}
       <section className="card-azul mt-4 px-3 py-3">
         <h2 className="font-display text-xl uppercase leading-none text-amarelo">
@@ -321,6 +323,7 @@ export default async function EstatisticasPage() {
           ))}
         </ol>
       </section>
+      </div>
     </div>
   );
 }
