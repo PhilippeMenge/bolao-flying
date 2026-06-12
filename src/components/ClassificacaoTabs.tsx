@@ -6,12 +6,13 @@ import { usePathname } from 'next/navigation';
 const TABS = [
   { href: '/classificacao', label: 'Ranking' },
   { href: '/classificacao/grupos', label: 'Grupos' },
+  { href: '/classificacao/estatisticas', label: 'Stats' },
 ] as const;
 
 export function ClassificacaoTabs() {
   const pathname = usePathname();
   return (
-    <div className="mb-4 grid grid-cols-2 gap-1 rounded-lg bg-azul p-1">
+    <div className="mb-4 grid grid-cols-3 gap-1 rounded-lg bg-azul p-1">
       {TABS.map((tab) => (
         <Link
           key={tab.href}
