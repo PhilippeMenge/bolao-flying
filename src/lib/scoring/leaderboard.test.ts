@@ -52,12 +52,33 @@ describe('computeLeaderboard', () => {
     });
 
     expect(rows).toEqual([
-      { participantId: 'ana', name: 'Ana', groupPoints: 14, thirdPoints: 1, knockoutPoints: 0, total: 15 },
-      { participantId: 'beto', name: 'Beto', groupPoints: 8, thirdPoints: 0, knockoutPoints: 6, total: 14 },
+      {
+        participantId: 'ana',
+        name: 'Ana',
+        groupPoints: 14,
+        liveGroupPoints: 0,
+        thirdPoints: 1,
+        liveThirdPoints: 0,
+        knockoutPoints: 0,
+        confirmedTotal: 15,
+        total: 15,
+      },
+      {
+        participantId: 'beto',
+        name: 'Beto',
+        groupPoints: 8,
+        liveGroupPoints: 0,
+        thirdPoints: 0,
+        liveThirdPoints: 0,
+        knockoutPoints: 6,
+        confirmedTotal: 14,
+        total: 14,
+      },
     ]);
   });
 
-  it('grupo incompleto não pontua; terceiros não pontuam sem advancers', () => {
+  it('grupo incompleto pontua AO VIVO (provisório, fora do confirmado)', () => {
+    // só os 3 jogos do time 1: tabela atual = [1, 2, 3, 4] (zerados desempatam por id)
     const incomplete = computeStandings(new Map([['A', [1, 2, 3, 4]]]), RESULTS.slice(0, 3));
     const rows = computeLeaderboard({
       participants: [{ id: 'ana', name: 'Ana' }],
@@ -68,7 +89,50 @@ describe('computeLeaderboard', () => {
       knockoutResults: [],
       knockoutPredictions: [],
     });
+    // grupo cravado contra a tabela parcial = 14; 3º atual = time 3, marcado → +1 ao vivo
+    expect(rows[0].liveGroupPoints).toBe(14);
+    expect(rows[0].liveThirdPoints).toBe(1);
+    expect(rows[0].groupPoints).toBe(0);
+    expect(rows[0].thirdPoints).toBe(0);
+    expect(rows[0].confirmedTotal).toBe(0);
+    expect(rows[0].total).toBe(15);
+  });
+
+  it('grupo sem nenhum jogo não pontua nem ao vivo', () => {
+    const untouched = computeStandings(new Map([['A', [1, 2, 3, 4]]]), []);
+    const rows = computeLeaderboard({
+      participants: [{ id: 'ana', name: 'Ana' }],
+      groupPredictions: predictions('ana', [1, 2, 3, 4]),
+      thirdPicks: [{ participantId: 'ana', teamId: 3 }],
+      standings: untouched,
+      thirdAdvancers: null,
+      knockoutResults: [],
+      knockoutPredictions: [],
+    });
     expect(rows[0].total).toBe(0);
+  });
+
+  it('ranking ordena pelo total ao vivo (provisório incluso)', () => {
+    const incomplete = computeStandings(new Map([['A', [1, 2, 3, 4]]]), RESULTS.slice(0, 3));
+    const rows = computeLeaderboard({
+      participants: [
+        { id: 'ana', name: 'Ana' },
+        { id: 'beto', name: 'Beto' },
+      ],
+      // Ana crava a tabela parcial (14 ao vivo); Beto inverte top-2 (8 ao vivo)
+      groupPredictions: [
+        ...predictions('ana', [1, 2, 3, 4]),
+        ...predictions('beto', [2, 1, 3, 4]),
+      ],
+      thirdPicks: [],
+      standings: incomplete,
+      thirdAdvancers: null,
+      knockoutResults: [],
+      knockoutPredictions: [],
+    });
+    expect(rows.map((r) => r.participantId)).toEqual(['ana', 'beto']);
+    expect(rows[0].total).toBe(14);
+    expect(rows[1].total).toBe(8);
   });
 
   it('participante sem palpites fica com 0 e entra no ranking', () => {
@@ -82,7 +146,17 @@ describe('computeLeaderboard', () => {
       knockoutPredictions: [],
     });
     expect(rows).toEqual([
-      { participantId: 'zeca', name: 'Zeca', groupPoints: 0, thirdPoints: 0, knockoutPoints: 0, total: 0 },
+      {
+        participantId: 'zeca',
+        name: 'Zeca',
+        groupPoints: 0,
+        liveGroupPoints: 0,
+        thirdPoints: 0,
+        liveThirdPoints: 0,
+        knockoutPoints: 0,
+        confirmedTotal: 0,
+        total: 0,
+      },
     ]);
   });
 });

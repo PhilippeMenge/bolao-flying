@@ -12,13 +12,15 @@ export type GroupMatchResult = {
   awayScore: number;
 };
 
-export type TeamStats = { points: number; gd: number; gf: number };
+export type TeamStats = { points: number; gd: number; gf: number; played: number };
 
 export type GroupStanding = {
   /** teamIds do 1º ao 4º */
   order: number[];
   /** true quando os 6 jogos do grupo terminaram */
   complete: boolean;
+  /** jogos do grupo já encerrados (0..6) */
+  playedMatches: number;
   stats: Map<number, TeamStats>;
 };
 
@@ -34,7 +36,7 @@ export function computeStandings(
 
   for (const [letter, teamIds] of teamsByGroup) {
     const stats = new Map<number, TeamStats>(
-      teamIds.map((id) => [id, { points: 0, gd: 0, gf: 0 }]),
+      teamIds.map((id) => [id, { points: 0, gd: 0, gf: 0, played: 0 }]),
     );
     const groupResults = finishedResults.filter((r) => r.groupLetter === letter);
 
@@ -42,6 +44,8 @@ export function computeStandings(
       const home = stats.get(r.homeTeamId);
       const away = stats.get(r.awayTeamId);
       if (!home || !away) continue;
+      home.played += 1;
+      away.played += 1;
       home.gf += r.homeScore;
       away.gf += r.awayScore;
       home.gd += r.homeScore - r.awayScore;
@@ -69,6 +73,7 @@ export function computeStandings(
     standings.set(letter, {
       order,
       complete: groupResults.length === MATCHES_PER_GROUP,
+      playedMatches: groupResults.length,
       stats,
     });
   }
@@ -98,4 +103,28 @@ export function computeThirdPlaceAdvancers(
       a.teamId - b.teamId,
   );
   return thirds.slice(0, 8).map((t) => t.teamId);
+}
+
+export type LiveThird = { teamId: number; groupLetter: string; stats: TeamStats };
+
+/**
+ * Tabela AO VIVO dos terceiros: o 3º atual de cada grupo que já teve jogo,
+ * ranqueados por pts/SG/GP. Os 8 primeiros estariam avançando se a fase
+ * terminasse agora. Grupos sem jogos ficam de fora.
+ */
+export function computeLiveThirdRanking(standings: Map<string, GroupStanding>): LiveThird[] {
+  const thirds: LiveThird[] = [];
+  for (const [groupLetter, g] of standings) {
+    if (g.playedMatches === 0) continue;
+    const teamId = g.order[2];
+    thirds.push({ teamId, groupLetter, stats: g.stats.get(teamId)! });
+  }
+  thirds.sort(
+    (a, b) =>
+      b.stats.points - a.stats.points ||
+      b.stats.gd - a.stats.gd ||
+      b.stats.gf - a.stats.gf ||
+      a.teamId - b.teamId,
+  );
+  return thirds;
 }

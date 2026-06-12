@@ -1,14 +1,23 @@
 // Composição do ranking — função pura; o carregamento do banco fica em load-leaderboard.ts.
 import { scoreGroup, scoreThirdPlacePicks } from './group';
 import { scoreKnockoutMatch, type KnockoutResultInput } from './knockout';
-import type { GroupStanding } from './standings';
+import { computeLiveThirdRanking, type GroupStanding } from './standings';
 
 export type LeaderboardRow = {
   participantId: string;
   name: string;
+  /** Grupos fechados (6 jogos) — confirmado */
   groupPoints: number;
+  /** Grupos em andamento, pontuados contra a tabela parcial — provisório */
+  liveGroupPoints: number;
+  /** Terceiros contra os 8 definitivos (12 grupos fechados ou override) */
   thirdPoints: number;
+  /** Terceiros contra o top-8 ao vivo, enquanto não há definitivo */
+  liveThirdPoints: number;
   knockoutPoints: number;
+  /** Só o que já não muda mais */
+  confirmedTotal: number;
+  /** Tudo, incluindo o provisório — é o número que manda no ranking */
   total: number;
 };
 
@@ -37,8 +46,13 @@ export type LeaderboardInput = {
 };
 
 export function computeLeaderboard(input: LeaderboardInput): LeaderboardRow[] {
-  // Só grupos completos pontuam (pontuação parcial conforme a Copa anda)
-  const scorableGroups = [...input.standings.entries()].filter(([, s]) => s.complete);
+  // Todo grupo que já teve jogo pontua: fechado conta como confirmado,
+  // em andamento conta como provisório ("se o grupo terminasse hoje").
+  const scorableGroups = [...input.standings.entries()].filter(([, s]) => s.playedMatches > 0);
+  // Sem os 8 terceiros definitivos, pontua contra o top-8 ao vivo.
+  const liveThirdAdvancers = input.thirdAdvancers
+    ? null
+    : computeLiveThirdRanking(input.standings).slice(0, 8).map((t) => t.teamId);
 
   const predictionsByParticipant = new Map<string, typeof input.groupPredictions>();
   for (const p of input.groupPredictions) {
@@ -64,20 +78,25 @@ export function computeLeaderboard(input: LeaderboardInput): LeaderboardRow[] {
     const myPredictions = predictionsByParticipant.get(participant.id) ?? [];
 
     let groupPoints = 0;
+    let liveGroupPoints = 0;
     for (const [letter, standing] of scorableGroups) {
       const predicted = myPredictions
         .filter((p) => p.groupLetter === letter)
         .sort((a, b) => a.position - b.position)
         .map((p) => p.teamId);
-      if (predicted.length === 4) groupPoints += scoreGroup(predicted, standing.order);
+      if (predicted.length !== 4) continue;
+      const points = scoreGroup(predicted, standing.order);
+      if (standing.complete) groupPoints += points;
+      else liveGroupPoints += points;
     }
 
+    const myThirds = thirdsByParticipant.get(participant.id) ?? [];
     let thirdPoints = 0;
+    let liveThirdPoints = 0;
     if (input.thirdAdvancers) {
-      thirdPoints = scoreThirdPlacePicks(
-        thirdsByParticipant.get(participant.id) ?? [],
-        input.thirdAdvancers,
-      );
+      thirdPoints = scoreThirdPlacePicks(myThirds, input.thirdAdvancers);
+    } else if (liveThirdAdvancers) {
+      liveThirdPoints = scoreThirdPlacePicks(myThirds, liveThirdAdvancers);
     }
 
     let knockoutPoints = 0;
@@ -86,15 +105,24 @@ export function computeLeaderboard(input: LeaderboardInput): LeaderboardRow[] {
       if (result) knockoutPoints += scoreKnockoutMatch(prediction, result);
     }
 
+    const confirmedTotal = groupPoints + thirdPoints + knockoutPoints;
     return {
       participantId: participant.id,
       name: participant.name,
       groupPoints,
+      liveGroupPoints,
       thirdPoints,
+      liveThirdPoints,
       knockoutPoints,
-      total: groupPoints + thirdPoints + knockoutPoints,
+      confirmedTotal,
+      total: confirmedTotal + liveGroupPoints + liveThirdPoints,
     };
   });
 
-  return rows.sort((a, b) => b.total - a.total || a.name.localeCompare(b.name, 'pt-BR'));
+  return rows.sort(
+    (a, b) =>
+      b.total - a.total ||
+      b.confirmedTotal - a.confirmedTotal ||
+      a.name.localeCompare(b.name, 'pt-BR'),
+  );
 }

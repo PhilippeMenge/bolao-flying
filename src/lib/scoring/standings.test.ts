@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { computeStandings, computeThirdPlaceAdvancers, type GroupMatchResult } from './standings';
+import {
+  computeLiveThirdRanking,
+  computeStandings,
+  computeThirdPlaceAdvancers,
+  type GroupMatchResult,
+} from './standings';
 
 // Grupo C da Copa 2022 (caso real com desempate por saldo):
 // Argentina 6pts (+3), Polônia 4pts (0), México 4pts (-1), Arábia Saudita 3pts (-2)
@@ -20,14 +25,18 @@ describe('computeStandings', () => {
     const standings = computeStandings(TEAMS, RESULTS_2022_C);
     const c = standings.get('C')!;
     expect(c.complete).toBe(true);
+    expect(c.playedMatches).toBe(6);
     expect(c.order).toEqual([ARG, POL, MEX, KSA]);
-    expect(c.stats.get(POL)).toEqual({ points: 4, gd: 0, gf: 2 });
-    expect(c.stats.get(MEX)).toEqual({ points: 4, gd: -1, gf: 2 });
+    expect(c.stats.get(POL)).toEqual({ points: 4, gd: 0, gf: 2, played: 3 });
+    expect(c.stats.get(MEX)).toEqual({ points: 4, gd: -1, gf: 2, played: 3 });
   });
 
-  it('grupo incompleto: complete = false', () => {
+  it('grupo incompleto: complete = false e playedMatches parcial', () => {
     const standings = computeStandings(TEAMS, RESULTS_2022_C.slice(0, 4));
-    expect(standings.get('C')!.complete).toBe(false);
+    const c = standings.get('C')!;
+    expect(c.complete).toBe(false);
+    expect(c.playedMatches).toBe(4);
+    expect(c.stats.get(ARG)!.played).toBe(2);
   });
 
   it('override do admin substitui a ordem computada', () => {
@@ -67,5 +76,37 @@ describe('computeThirdPlaceAdvancers', () => {
     const advancers = computeThirdPlaceAdvancers(standings)!;
     // só 2 grupos → os 2 terceiros entram, MEX (4pts) na frente de D3 (3pts)
     expect(advancers).toEqual([MEX, D3]);
+  });
+});
+
+describe('computeLiveThirdRanking', () => {
+  const D1 = 11, D2 = 12, D3 = 13, D4 = 14;
+
+  it('ignora grupos sem jogos e ranqueia os 3ºs atuais por pts/SG/GP', () => {
+    const teams = new Map([
+      ['C', [ARG, KSA, MEX, POL]],
+      ['D', [D1, D2, D3, D4]],
+    ]);
+    // C completo (3º = MEX, 4pts); D sem nenhum jogo → fora da tabela
+    const standings = computeStandings(teams, RESULTS_2022_C);
+    const ranking = computeLiveThirdRanking(standings);
+    expect(ranking).toHaveLength(1);
+    expect(ranking[0].teamId).toBe(MEX);
+    expect(ranking[0].groupLetter).toBe('C');
+    expect(ranking[0].stats.points).toBe(4);
+  });
+
+  it('grupo parcial entra com o 3º da tabela atual', () => {
+    // só o 1º jogo do C (ARG 1×2 KSA) → tabela atual: KSA, MEX, POL, ARG
+    // (MEX/POL zerados empatam e desempatam por id; ARG cai pro 4º com SG -1)
+    const standings = computeStandings(TEAMS, RESULTS_2022_C.slice(0, 1));
+    const ranking = computeLiveThirdRanking(standings);
+    expect(ranking).toHaveLength(1);
+    expect(ranking[0].teamId).toBe(POL);
+  });
+
+  it('vazio quando nenhum grupo jogou', () => {
+    const standings = computeStandings(TEAMS, []);
+    expect(computeLiveThirdRanking(standings)).toEqual([]);
   });
 });
